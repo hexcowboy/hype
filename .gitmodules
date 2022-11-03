@@ -1,9 +1,6 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "lib/BokkyPooBahsRedBlackTreeLibrary"]
-	path = lib/BokkyPooBahsRedBlackTreeLibrary
-	url = https://github.com/perpdex/BokkyPooBahsRedBlackTreeLibrary
 [submodule "lib/prb-math"]
 	path = lib/prb-math
 	url = https://github.com/paulrberg/prb-math
