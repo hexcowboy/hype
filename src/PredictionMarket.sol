@@ -38,12 +38,10 @@ contract PredictionMarket {
 
     Bet[] bets;
     Cycle[] cycles;
-    mapping(uint256 => uint256) betsToCycles;
+    mapping(uint256 => uint256) public betsToCycles;
 
-    constructor() {}
-
-    // creates a cycle (anyone can create a cycle)
-    // metadata like the name and description of the cycle should be off-chain
+    // Creates a cycle (anyone can create a cycle)
+    // @notice Metadata like the title of the cycle should be off-chain
     function createCycle(
         uint256 startingBlock,
         uint32 blockLength,
@@ -61,25 +59,45 @@ contract PredictionMarket {
         return cycles.length - 1;
     }
 
-    // places bets based on how much wei was sent
+    // Getter function for cycles
+    // @notice Leaderboard is not returned due to Solidity limitations.
+    function getCycle(uint256 cycleId)
+        public
+        view
+        returns (
+            uint256,
+            uint64,
+            uint64,
+            uint128
+        )
+    {
+        return (
+            cycles[cycleId].startingBlock,
+            cycles[cycleId].blockLength,
+            cycles[cycleId].betPrice,
+            cycles[cycleId].balance
+        );
+    }
+
+    // Places bets based on how much wei was sent
     function placeBet(uint256 cycleId, bytes4 symbol)
         public
         payable
         returns (uint256 betId)
     {
         Cycle storage cycle = cycles[cycleId];
+
         require(msg.value > 0, "no ether provided");
         require(
             msg.value % cycle.betPrice == 0,
             "uneven number of bets placed"
         );
         require(
-            msg.value <= UINT_56_MAX_SIZE,
+            msg.value * cycle.betPrice <= UINT_56_MAX_SIZE,
             "you placed too many bets, try placing multiple"
         );
-        // TODO require block number is valid
         require(
-            block.number > cycle.startingBlock + cycle.blockLength,
+            block.number <= cycle.startingBlock + cycle.blockLength,
             "the cycle has already ended"
         );
 
@@ -99,9 +117,7 @@ contract PredictionMarket {
 
         // add to cycle
         cycle.balance += uint128(msg.value);
-        uint240 newBetAmount = cycle.leaderboard.nodes[symbol].value +
-            uint240(totalBets);
-        cycle.leaderboard.upsert(symbol, newBetAmount);
+        cycle.leaderboard.upsert(symbol, uint240(totalBets));
         betsToCycles[betIndex] = cycleId;
 
         // TODO emit event
@@ -111,7 +127,21 @@ contract PredictionMarket {
 
     // TODO batchPlaceBet
 
-    // claims funds from a cycle that have ended
+    // Getter function for bets
+    function getBet(uint256 betId) public view returns (Bet memory) {
+        return bets[betId];
+    }
+
+    // Getter function for leaderboard rank
+    function getSymbolRanking(uint256 cycleId, bytes4 symbol)
+        public
+        view
+        returns (uint256)
+    {
+        return cycles[cycleId].leaderboard.getPosition(symbol);
+    }
+
+    // Claims funds from a cycle that has ended
     function claimFunds(uint256 betId) public {
         Cycle storage cycle = cycles[betsToCycles[betId]];
         Bet storage bet = bets[betId];
@@ -126,7 +156,6 @@ contract PredictionMarket {
         uint256 timeliness = (bet.placement + bet.amount) /
             cycle.leaderboard.nodes[bet.symbol].value;
 
-        // send money to player
         payable(msg.sender).transfer(
             cycle.betPrice *
                 bet.amount *
