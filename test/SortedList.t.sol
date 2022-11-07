@@ -3,7 +3,7 @@
 pragma solidity >=0.8.16;
 
 import "forge-std/Test.sol";
-import "src/SortedList.sol";
+import "contracts/SortedList.sol";
 
 contract SortedListTest is Test {
     using SortedList for SortedList.List;

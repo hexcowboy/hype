@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-// (c) hexcowboy 2022-current
 pragma solidity >=0.8.16;
 
 import "forge-std/Test.sol";
-import "src/PredictionMarket.sol";
+import "@forge-std/StdCheats.sol";
+
+import "contracts/PredictionMarket.sol";
 
 contract PredictionMarketTest is Test {
     PredictionMarket market;
@@ -169,5 +170,89 @@ contract PredictionMarketTest is Test {
             uint256 ranking = market.getSymbolRanking(cycleId, results[i]);
             assertEq(ranking, i + 1);
         }
+    }
+
+    function testClaimingBeforeCycleEndsFails() public {
+        uint256 cycleId = market.createCycle(0, 10, 100);
+        vm.roll(5);
+        uint256 betId = market.placeBet{value: 100}(cycleId, hex"1010");
+        vm.expectRevert("the cycle has not yet ended");
+        market.claimFunds(betId);
+    }
+
+    function testClaimingTwiceFails() public {
+        uint256 cycleId = market.createCycle(0, 10, 100);
+
+        vm.deal(0x1111111111111111111111111111111111111111, 1 ether);
+        vm.startPrank(0x1111111111111111111111111111111111111111);
+
+        uint256 betId = market.placeBet{value: 100}(cycleId, hex"1010");
+        vm.roll(11);
+        market.claimFunds(betId);
+        vm.expectRevert("the funds were already claimed");
+        market.claimFunds(betId);
+
+        vm.stopPrank();
+    }
+
+    function testOnlyPlacerCanClaim() public {
+        uint256 cycleId = market.createCycle(0, 10, 100);
+
+        vm.deal(0x1111111111111111111111111111111111111111, 1 ether);
+        vm.startPrank(0x1111111111111111111111111111111111111111);
+        uint256 betId = market.placeBet{value: 100}(cycleId, hex"1010");
+        vm.stopPrank();
+
+        vm.roll(11);
+
+        vm.startPrank(0x2222222222222222222222222222222222222222);
+        vm.expectRevert("you did not place this bet");
+        market.claimFunds(betId);
+        vm.stopPrank();
+    }
+
+    // this doesnt actually check to see if claim amounts are correct, it just
+    // checks to make sure the contract doesn't run out of money if everyone
+    // claims their bet
+    function testFuzzClaiming(
+        uint8 betCost,
+        address[ROUNDS] memory placers,
+        uint8[ROUNDS] memory votes
+    ) public {
+        betCost = uint8(bound(betCost, 1, 256));
+        for (uint256 i = 0; i < ROUNDS; i++) {
+            vm.assume(votes[i] != 0);
+            vm.assume(placers[i] != 0x000000000000000000636F6e736F6c652e6c6f67);
+            vm.assume(placers[i] != 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
+            vm.assume(placers[i] != 0x4e59b44847b379578588920cA78FbF26c0B4956C);
+            vm.assume(placers[i] != 0xCe71065D4017F316EC606Fe4422e11eB2c47c246);
+            vm.assume(placers[i] != address(this));
+            StdCheatsSafe.assumeNoPrecompiles(placers[i]);
+        }
+
+        uint256 cycleId = market.createCycle(1, 1, betCost);
+        uint256[] memory betIds = new uint256[](ROUNDS);
+
+        // place bets
+        for (uint256 i = 0; i < ROUNDS; i++) {
+            vm.deal(placers[i], uint256(votes[i]) * uint256(betCost) + 1 ether);
+            vm.startPrank(placers[i]);
+            uint256 betId = market.placeBet{
+                value: uint256(votes[i]) * uint256(betCost)
+            }(cycleId, hex"1010");
+            betIds[i] = betId;
+            vm.stopPrank();
+        }
+
+        vm.roll(2);
+
+        // claim bets
+        for (uint256 i = 0; i < betIds.length; i++) {
+            vm.startPrank(placers[i]);
+            market.claimFunds(betIds[i]);
+            vm.stopPrank();
+        }
+
+        assertEq(address(market).balance, 0);
     }
 }

@@ -1,2 +1,4 @@
-forge-std=lib/forge-std/src/
+@forge-std=lib/forge-std/src
 @prb=lib/prb-math/contracts
+@solmate=lib/solmate/src
+@abdk=lib/abdk-libraries-solidity

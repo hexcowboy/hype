@@ -2,13 +2,17 @@
 // (c) hexcowboy 2022-current
 pragma solidity >=0.8.0;
 
-import "@prb/PRBMathSD59x18.sol";
-import "./RedBlackTree.sol";
-import "./OrderStatisticsTree.sol";
+// import "@forge-std/console2.sol";
+
+// import "@prb/PRBMathSD59x18.sol";
+// import "@prb/PRBMathUD60x18.sol";
+import "@abdk/ABDKMath64x64.sol";
+// import "@solmate/utils/FixedPointMathLib.sol";
 import "./SortedList.sol";
 
 contract PredictionMarket {
-    using PRBMathSD59x18 for int256;
+    // using PRBMathSD59x18 for int256;
+    using ABDKMath64x64 for int128;
     using SortedList for SortedList.List;
 
     uint256 constant UINT_56_MAX_SIZE = 72057594037927935;
@@ -147,28 +151,95 @@ contract PredictionMarket {
         Bet storage bet = bets[betId];
 
         require(
-            cycle.startingBlock + cycle.blockLength < block.number,
+            cycle.startingBlock + cycle.blockLength <= block.number,
             "the cycle has not yet ended"
         );
         require(!bet.claimed, "the funds were already claimed");
         require(bet.placer == msg.sender, "you did not place this bet");
 
-        uint256 timeliness = (bet.placement + bet.amount) /
-            cycle.leaderboard.nodes[bet.symbol].value;
+        uint256 totalReward;
+        uint256 symbolTotal = cycle.leaderboard.nodes[bet.symbol].value;
 
-        payable(msg.sender).transfer(
-            cycle.betPrice *
-                bet.amount *
-                // timeliness (-2x^2+2)
-                uint256(-2 * int256((timeliness**2) + 2)) *
-                // symbol ranking (-2*sqrt(x)+2)
-                uint256(
-                    -2 *
-                        int256(bet.placement / cycle.leaderboard.length)
-                            .sqrt() +
-                        2
+        for (uint256 i = 0; i < bet.amount; i++) {
+            // (bet.placement + i) / symbolTotal
+            int128 timeliness = ABDKMath64x64
+                .fromUInt(bet.placement)
+                .add(ABDKMath64x64.fromUInt(i))
+                .div(ABDKMath64x64.fromUInt(symbolTotal));
+
+            // console2.log("-------------------");
+            // console2.log(bet.placement);
+            // console2.log(cycle.betPrice);
+            // console2.log(i);
+            // console2.log(symbolTotal);
+            // console2.log("-------------------");
+            // console2.log(uint256(int256(timeliness)));
+            // console2.log(
+            //     uint256(
+            //         int256(
+            //             ABDKMath64x64.fromUInt(1).sub(timeliness.pow(2)).sqrt()
+            //         )
+            //     )
+            // );
+            // console2.log(
+            //     uint256(
+            //         int256(
+            //             ABDKMath64x64.fromInt(1).sub(
+            //                 ABDKMath64x64
+            //                     .fromInt(1)
+            //                     .sub(timeliness.pow(2))
+            //                     .sqrt()
+            //             )
+            //         )
+            //     )
+            // );
+            // console2.log(
+            //     (
+            //         ABDKMath64x64.fromUInt(1).sub(timeliness.pow(2)).sqrt().add(
+            //             ABDKMath64x64.fromInt(1).sub(
+            //                 ABDKMath64x64
+            //                     .fromInt(1)
+            //                     .sub(timeliness.pow(2))
+            //                     .sqrt()
+            //             )
+            //         )
+            //     ).toUInt()
+            // );
+
+            // betPrice * ((sqrt(1 - timeliness^2)) + (1 - sqrt(1 - (timeliness - 1)^2)))
+            // where x = timeliness
+            totalReward += ABDKMath64x64
+                .fromUInt(cycle.betPrice)
+                .mul(
+                    ABDKMath64x64.fromUInt(1).sub(timeliness.pow(2)).sqrt().add(
+                        ABDKMath64x64.fromInt(1).sub(
+                            ABDKMath64x64
+                                .fromInt(1)
+                                .sub(timeliness.pow(2))
+                                .sqrt()
+                        )
+                    )
                 )
-        );
+                .toUInt();
+        }
+
+        // console2.log("--------------------------------");
+        // console2.log("bet placement * amount");
+        // console2.log(bet.placement * bet.amount);
+        // console2.log("bet cost");
+        // console2.log(cycle.betPrice);
+        // console2.log("player reward");
+        // console2.log(totalReward);
+        //
+        // console2.log("");
+        // console2.log("contract total wei");
+        // console2.log(symbolTotal * cycle.betPrice);
+        // console2.log("contract remaining wei");
+        // console2.log(address(this).balance);
+
+        payable(msg.sender).transfer(totalReward);
+
+        bet.claimed = true;
     }
 
     // TODO batchClaimFunds
