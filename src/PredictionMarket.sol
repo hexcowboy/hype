@@ -39,6 +39,28 @@ contract PredictionMarket {
     Cycle[] cycles;
     mapping(uint256 => uint256) public betsToCycles;
 
+    event CycleCreated(
+        address indexed creator,
+        uint256 indexed id,
+        uint256,
+        uint256,
+        uint256
+    );
+
+    event BetPlaced(
+        address indexed placer,
+        uint256 indexed betId,
+        uint256 indexed cycleId,
+        bytes4 symbol,
+        uint256 amount
+    );
+
+    event BetClaimed(
+        address indexed placer,
+        uint256 indexed id,
+        uint256 reward
+    );
+
     // Creates a cycle (anyone can create a cycle)
     // @notice Metadata like the title of the cycle should be off-chain
     function createCycle(
@@ -48,14 +70,19 @@ contract PredictionMarket {
     ) public returns (uint256 cycleId) {
         require(betPrice > 0, "bet price must be greater than 0");
 
+        cycleId = cycles.length;
         Cycle storage cycle = cycles.push();
         cycle.startingBlock = startingBlock;
         cycle.blockLength = blockLength;
         cycle.betPrice = betPrice;
 
-        // TODO emit event
-
-        return cycles.length - 1;
+        emit CycleCreated(
+            msg.sender,
+            cycleId,
+            startingBlock,
+            blockLength,
+            betPrice
+        );
     }
 
     // Getter function for cycles
@@ -100,28 +127,26 @@ contract PredictionMarket {
             "the cycle has already ended"
         );
 
-        uint256 totalBets = msg.value / cycle.betPrice;
+        uint256 amount = msg.value / cycle.betPrice;
 
         Bet memory bet = Bet(
             symbol,
             false,
-            uint56(totalBets),
+            uint56(amount),
             msg.sender,
             cycle.leaderboard.length + 1
         );
 
         // create bet
-        uint256 betIndex = bets.length;
+        betId = bets.length;
         bets.push(bet);
 
         // add to cycle
         cycle.balance += uint128(msg.value);
-        cycle.leaderboard.upsert(symbol, uint240(totalBets));
-        betsToCycles[betIndex] = cycleId;
+        cycle.leaderboard.upsert(symbol, uint240(amount));
+        betsToCycles[betId] = cycleId;
 
-        // TODO emit event
-
-        return bets.length - 1;
+        emit BetPlaced(msg.sender, betId, cycleId, symbol, amount);
     }
 
     // TODO batchPlaceBet
@@ -182,6 +207,8 @@ contract PredictionMarket {
         payable(msg.sender).transfer(totalReward);
 
         bet.claimed = true;
+
+        emit BetClaimed(msg.sender, betId, totalReward);
     }
 
     // TODO batchClaimFunds

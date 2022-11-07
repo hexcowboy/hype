@@ -15,12 +15,29 @@ contract PredictionMarketTest is Test {
         market = new PredictionMarket();
     }
 
+    event CycleCreated(
+        address indexed creator,
+        uint256 indexed id,
+        uint256,
+        uint256,
+        uint256
+    );
+
     function testFuzzCreateCycle(
         uint256 _startingBlock,
         uint32 _blockLength,
         uint64 _betPrice
     ) public {
         vm.assume(_betPrice > 0);
+
+        vm.expectEmit(true, true, false, true);
+        emit CycleCreated(
+            address(this),
+            0,
+            _startingBlock,
+            _blockLength,
+            _betPrice
+        );
         uint256 cycleId = market.createCycle(
             _startingBlock,
             _blockLength,
@@ -70,6 +87,14 @@ contract PredictionMarketTest is Test {
         market.placeBet{value: 100}(cycleId, hex"1010");
     }
 
+    event BetPlaced(
+        address indexed placer,
+        uint256 indexed betId,
+        uint256 indexed cycleId,
+        bytes4 symbol,
+        uint256 amount
+    );
+
     function testFuzzPlaceBet(
         uint32 blockLength,
         uint256 betAmount,
@@ -79,8 +104,13 @@ contract PredictionMarketTest is Test {
         vm.assume(betAmount < UINT_56_MAX_SIZE);
         vm.assume(blockLength > 0);
         vm.assume(symbol > 0);
+
         uint256 cycleId = market.createCycle(1, blockLength, 1);
+
+        vm.expectEmit(true, true, true, true);
+        emit BetPlaced(address(this), 0, 0, symbol, betAmount);
         uint256 betId = market.placeBet{value: betAmount}(cycleId, symbol);
+
         PredictionMarket.Bet memory bet = market.getBet(betId);
         assertEq(bet.symbol, symbol);
         assertEq(bet.amount, betAmount);
@@ -211,6 +241,12 @@ contract PredictionMarketTest is Test {
         vm.stopPrank();
     }
 
+    event BetClaimed(
+        address indexed placer,
+        uint256 indexed id,
+        uint256 reward
+    );
+
     // this doesnt actually check to see if claim amounts are correct, it just
     // checks to make sure the contract doesn't run out of money if everyone
     // claims their bet
@@ -249,6 +285,8 @@ contract PredictionMarketTest is Test {
         // claim bets
         for (uint256 i = 0; i < betIds.length; i++) {
             vm.startPrank(placers[i]);
+            vm.expectEmit(true, true, false, false); // don't check `reward` field
+            emit BetClaimed(placers[i], i, 0);
             market.claimFunds(betIds[i]);
             vm.stopPrank();
         }
