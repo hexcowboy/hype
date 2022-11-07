@@ -2,12 +2,7 @@
 // (c) hexcowboy 2022-current
 pragma solidity >=0.8.0;
 
-// import "@forge-std/console2.sol";
-
-// import "@prb/PRBMathSD59x18.sol";
-// import "@prb/PRBMathUD60x18.sol";
 import "@abdk/ABDKMath64x64.sol";
-// import "@solmate/utils/FixedPointMathLib.sol";
 import "./SortedList.sol";
 
 contract PredictionMarket {
@@ -167,45 +162,6 @@ contract PredictionMarket {
                 .add(ABDKMath64x64.fromUInt(i))
                 .div(ABDKMath64x64.fromUInt(symbolTotal));
 
-            // console2.log("-------------------");
-            // console2.log(bet.placement);
-            // console2.log(cycle.betPrice);
-            // console2.log(i);
-            // console2.log(symbolTotal);
-            // console2.log("-------------------");
-            // console2.log(uint256(int256(timeliness)));
-            // console2.log(
-            //     uint256(
-            //         int256(
-            //             ABDKMath64x64.fromUInt(1).sub(timeliness.pow(2)).sqrt()
-            //         )
-            //     )
-            // );
-            // console2.log(
-            //     uint256(
-            //         int256(
-            //             ABDKMath64x64.fromInt(1).sub(
-            //                 ABDKMath64x64
-            //                     .fromInt(1)
-            //                     .sub(timeliness.pow(2))
-            //                     .sqrt()
-            //             )
-            //         )
-            //     )
-            // );
-            // console2.log(
-            //     (
-            //         ABDKMath64x64.fromUInt(1).sub(timeliness.pow(2)).sqrt().add(
-            //             ABDKMath64x64.fromInt(1).sub(
-            //                 ABDKMath64x64
-            //                     .fromInt(1)
-            //                     .sub(timeliness.pow(2))
-            //                     .sqrt()
-            //             )
-            //         )
-            //     ).toUInt()
-            // );
-
             // betPrice * ((sqrt(1 - timeliness^2)) + (1 - sqrt(1 - (timeliness - 1)^2)))
             // where x = timeliness
             totalReward += ABDKMath64x64
@@ -222,20 +178,6 @@ contract PredictionMarket {
                 )
                 .toUInt();
         }
-
-        // console2.log("--------------------------------");
-        // console2.log("bet placement * amount");
-        // console2.log(bet.placement * bet.amount);
-        // console2.log("bet cost");
-        // console2.log(cycle.betPrice);
-        // console2.log("player reward");
-        // console2.log(totalReward);
-        //
-        // console2.log("");
-        // console2.log("contract total wei");
-        // console2.log(symbolTotal * cycle.betPrice);
-        // console2.log("contract remaining wei");
-        // console2.log(address(this).balance);
 
         payable(msg.sender).transfer(totalReward);
 

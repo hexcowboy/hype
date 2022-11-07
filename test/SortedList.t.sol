@@ -2,8 +2,8 @@
 // (c) hexcowboy 2022-current
 pragma solidity >=0.8.16;
 
-import "forge-std/Test.sol";
-import "contracts/SortedList.sol";
+import "@forge-std/Test.sol";
+import "src/SortedList.sol";
 
 contract SortedListTest is Test {
     using SortedList for SortedList.List;

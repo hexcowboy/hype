@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.16;
 
-import "forge-std/Test.sol";
+import "@forge-std/Test.sol";
 import "@forge-std/StdCheats.sol";
 
-import "contracts/PredictionMarket.sol";
+import "src/PredictionMarket.sol";
 
 contract PredictionMarketTest is Test {
     PredictionMarket market;
