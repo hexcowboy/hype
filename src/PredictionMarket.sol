@@ -52,7 +52,8 @@ contract PredictionMarket {
         uint256 indexed betId,
         uint256 indexed cycleId,
         bytes4 symbol,
-        uint256 amount
+        uint256 amount,
+        uint256 placement
     );
 
     event BetClaimed(
@@ -128,13 +129,14 @@ contract PredictionMarket {
         );
 
         uint256 amount = msg.value / cycle.betPrice;
+        uint256 placement = cycle.leaderboard.length + 1;
 
         Bet memory bet = Bet(
             symbol,
             false,
             uint56(amount),
             msg.sender,
-            cycle.leaderboard.length + 1
+            placement
         );
 
         // create bet
@@ -146,10 +148,17 @@ contract PredictionMarket {
         cycle.leaderboard.upsert(symbol, uint240(amount));
         betsToCycles[betId] = cycleId;
 
-        emit BetPlaced(msg.sender, betId, cycleId, symbol, amount);
+        emit BetPlaced(msg.sender, betId, cycleId, symbol, amount, placement);
     }
 
-    // TODO batchPlaceBet
+    // @notice `cycleIds` and `symbols` should have the same length or it will
+    //         revert
+    // function batchPlaceBet(uint256[] cycleIds, bytes4[] symbols)
+    //     public
+    //     payable
+    //     returns (uint256 betId)
+    // {
+    // }
 
     // Getter function for bets
     function getBet(uint256 betId) public view returns (Bet memory) {

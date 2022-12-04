@@ -11,11 +11,3 @@ Cycles can be created by anyone and will last a certain period of blocks. During
 ## Security Considerations
 
 This contract has not been audited and I'm too poor to fund an audit. Use this contract at your own risk and don't send money to it that you aren't willing to lose.
-
-## Donation Address
-
-If you would like to help this contract become audited, please consider donating to my personal address (all funds received after November 15, 2022 will go towards the funding of an audit). I will be creating a Juicebox DAO and Gnosis safe if EPM ends up gaining popularity.
-
-```
-0x67Fd888Da2319f8f8419FD7842e32d5C5E71F528
-```
