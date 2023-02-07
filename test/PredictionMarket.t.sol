@@ -92,7 +92,8 @@ contract PredictionMarketTest is Test {
         uint256 indexed betId,
         uint256 indexed cycleId,
         bytes4 symbol,
-        uint256 amount
+        uint256 amount,
+        uint256 placement
     );
 
     function testFuzzPlaceBet(
@@ -108,7 +109,7 @@ contract PredictionMarketTest is Test {
         uint256 cycleId = market.createCycle(1, blockLength, 1);
 
         vm.expectEmit(true, true, true, true);
-        emit BetPlaced(address(this), 0, 0, symbol, betAmount);
+        emit BetPlaced(address(this), 0, 0, symbol, betAmount, 1);
         uint256 betId = market.placeBet{value: betAmount}(cycleId, symbol);
 
         PredictionMarket.Bet memory bet = market.getBet(betId);
@@ -258,11 +259,7 @@ contract PredictionMarketTest is Test {
         betCost = uint8(bound(betCost, 1, 256));
         for (uint256 i = 0; i < ROUNDS; i++) {
             vm.assume(votes[i] != 0);
-            vm.assume(placers[i] != 0x000000000000000000636F6e736F6c652e6c6f67);
-            vm.assume(placers[i] != 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-            vm.assume(placers[i] != 0x4e59b44847b379578588920cA78FbF26c0B4956C);
-            vm.assume(placers[i] != 0xCe71065D4017F316EC606Fe4422e11eB2c47c246);
-            vm.assume(placers[i] != address(this));
+            assumePayable(placers[i]);
             StdCheatsSafe.assumeNoPrecompiles(placers[i]);
         }
 
